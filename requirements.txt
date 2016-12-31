@@ -6,4 +6,6 @@ mock >= 1.0.1
 pillow == 2.9.0
 pytz
 future >= 0.15.2
+Jinja2 >= 2.8.1, < 2.9.0
 python-dateutil
+ddt
