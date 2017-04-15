@@ -433,7 +433,7 @@ class CmdSetHome(MuxCommand):
             return
         obj.home = home
         if home is None:
-            self.msg("|g'%s' home cleared. {yWarning, this object may get "
+            self.msg("|g'%s' home cleared. |yWarning, this object may get "
                      "lost if its container is destroyed.|n" % obj.name)
         else:
             self.msg("|g'%s' home set to '%s'."
@@ -581,7 +581,7 @@ class CmdExamine(MuxCommand):
             else:
                 mergemode = "object"
             get_and_merge_cmdsets(
-                obj, self.session, self.player, obj, mergemode).addCallback(
+                obj, self.session, self.player, obj, mergemode, self.raw).addCallback(
                     self.cmd_info)
             return
 
@@ -647,8 +647,6 @@ class CmdExamine(MuxCommand):
                 # we only show the first session's cmdset here (it is -in principle- possible that
                 # different sessions have different cmdsets but for admins who want such madness
                 # it is better that they overload with their own CmdExamine to handle it).
-                print obj.player.sessions.get(obj.sessid)
-                print obj.player.sessions
                 all_cmdsets.extend([(cmdset.key, cmdset) for cmdset in obj.player.sessions.all()[0].cmdset.all()])
         else:
             try:
@@ -678,53 +676,57 @@ class CmdExamine(MuxCommand):
             self.msg("Owner: %s" % display_owner)
             return
         true_owner = get_owner(obj, player_check=True)
-        name = "{wName/Key: {c%s|n(#%s)" % (obj.name, obj.id)
-        owner_string = '{wOwner: |n'
+        name = "|wName/Key: |c%s|n(#%s)" % (obj.name, obj.id)
+        owner_string = '|wOwner: |n'
         if not (true_owner or display_owner):
             owner_string += 'This object is |rORPHANED|n'
         elif (true_owner == display_owner) or not display_owner:
-            owner_string += '{c%s|n(#%s)[%s]' % (
+            owner_string += '|c%s|n(#%s)[%s]' % (
                 true_owner.name, true_owner.id,
                 true_owner.__class__.__name__)
         elif display_owner and not true_owner:
-            owner_string += '{c%s|n(#%s)[%s]' % (
+            owner_string += '|c%s|n(#%s)[%s]' % (
                 display_owner.name, display_owner.id,
                 display_owner.__class__.__name__)
         else:
-            owner_string += '{c%s|n(#%s)[%s] via {c%s|n(#%s)[%s]' % (
+            owner_string += '|c%s|n(#%s)[%s] via |c%s|n(#%s)[%s]' % (
                 true_owner.name, true_owner.id,
                 true_owner.__class__.__name__, display_owner,
                 display_owner.id, display_owner.__class__.__name__)
-        typeclass = "{wTypeclass: %s (%s)" % (obj.typename,
+        typeclass = "|wTypeclass: %s (%s)" % (obj.typename,
                                               obj.typeclass_path)
-        permissions = '{wPermissions:|n %s' % (
+        permissions = '|wPermissions:|n %s' % (
                       ', '.join(obj.permissions.all()) or '|rNone|n')
         lines = ["-" * 78, name, owner_string, typeclass, permissions]
         if getattr(obj, 'player', None):
-            player_line = "{wPlayer:|n {c%s|n(#%s)" % (obj.player.name, obj.player.id)
-            ppermissions = "{wPlayer Permisions:|n %s" % (
-                ', '.join(obj.player.permissions.all() or '|rNone|n'))
+            player_line = "|wPlayer:|n |c%s|n(#%s)" % (obj.player.name, obj.player.id)
+            ppermissions_set = obj.player.permissions.all()
+            if ppermissions_set:
+                ppermissions = "|wPlayer Permisions:|n %s" % (
+                    ', '.join(obj.player.permissions.all()))
+            else:
+                ppermissions = '|rNone|n'
             if obj.player.is_superuser:
                 ppermissions += ' |g[Superuser]|n'
             if obj.player.db._quelled:
-                ppermissions += ' {y(quelled)|n'
+                ppermissions += ' |y(quelled)|n'
             lines.extend([player_line, ppermissions])
-        sessions_line = "{wSessions: |n"
+        sessions_line = "|wSessions: |n"
         if hasattr(obj, "sessions") and obj.sessions.all():
             sessions_line += (
                 ", ".join(str(sess.sessid) for sess in obj.sessions.all()))
         else:
             sessions_line += 'No sessions attached.'
-        location = "{wLocation: |n%s" % self.namer(obj.location)
-        destination = "{wDestination: |n%s" % self.namer(obj.destination)
-        home = "{wHome: |n%s" % self.namer(obj.home)
-        scripts = "{wScripts|n: "
+        location = "|wLocation: |n%s" % self.namer(obj.location)
+        destination = "|wDestination: |n%s" % self.namer(obj.destination)
+        home = "|wHome: |n%s" % self.namer(obj.home)
+        scripts = "|wScripts|n: "
         if str(obj.scripts):
             scripts += '\n%s' % obj.scripts
         else:
             scripts += '|rNone|n'
         excluded = ['owner', 'display_owner']
-        tags = "{wTags|n: %s" % (
+        tags = "|wTags|n: %s" % (
             utils.fill(", ".join(
                 "{}:{}".format(key, category) if category else key
                 for key, category in obj.tags.all(return_key_and_category=True)
@@ -1036,7 +1038,7 @@ class BaseMsgCommand(MuxCommand):
         self.msg("|gMessage set.")
 
 
-class CmdSuccMsg(MuxCommand):
+class CmdSuccMsg(BaseMsgCommand):
     """
     @success object=message
 
@@ -1047,7 +1049,7 @@ class CmdSuccMsg(MuxCommand):
     aliases = ['@succ', '@suc']
 
 
-class CmdOSuccMsg(MuxCommand):
+class CmdOSuccMsg(BaseMsgCommand):
     """
     @osuccess object=message
 
@@ -1058,7 +1060,7 @@ class CmdOSuccMsg(MuxCommand):
     aliases = ['@osucc', '@osuc']
 
 
-class CmdFailMsg(MuxCommand):
+class CmdFailMsg(BaseMsgCommand):
     """
     @failure object=message
 
@@ -1069,7 +1071,7 @@ class CmdFailMsg(MuxCommand):
     aliases = ['@fail']
 
 
-class CmdOFailMsg(MuxCommand):
+class CmdOFailMsg(BaseMsgCommand):
     """
     @ofailure object=message
 
@@ -1081,7 +1083,7 @@ class CmdOFailMsg(MuxCommand):
     aliases = ['@ofail']
 
 
-class CmdDropMsg(MuxCommand):
+class CmdDropMsg(BaseMsgCommand):
     """
     @drop object=message
 
@@ -1091,7 +1093,7 @@ class CmdDropMsg(MuxCommand):
     key = '@drop'
 
 
-class CmdODropMsg(MuxCommand):
+class CmdODropMsg(BaseMsgCommand):
     """
     @odrop object=message
 
