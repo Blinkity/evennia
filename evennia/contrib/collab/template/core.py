@@ -9,7 +9,7 @@ from jinja2 import BaseLoader
 
 from jinja2 import DebugUndefined
 from jinja2 import TemplateSyntaxError
-from jinja2.exceptions import SecurityError, TemplatesNotFound
+from jinja2.exceptions import TemplatesNotFound
 from jinja2.sandbox import SandboxedEnvironment
 
 
@@ -21,7 +21,7 @@ class ExpressionLoader(BaseLoader):
     Take a template's 'name' and evaluate it literally as the template.
     """
     def get_source(self, environment, template):
-        return template, 'expression', False
+        return template, 'expression', None
 
 
 class EvTemplateEnvironment(SandboxedEnvironment):
